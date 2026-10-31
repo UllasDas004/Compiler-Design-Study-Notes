@@ -1,40 +1,227 @@
-Write a Lex (or Flex) program
-that recognizes tokens for a small
-programming language fragment and
-prints each token along with its type and lexeme.
+// ============================================================================
+// QUESTION: Write a Lex (or Flex) program that recognizes tokens for a small
+// programming language fragment and prints each token along with its type and lexeme.
+// ============================================================================
+//
+// WHAT IS LEX / FLEX?
+// -------------------
+// Lex is a **lexical analyzer generator**. You write a specification file (.l)
+// with REGULAR EXPRESSIONS and ACTIONS. Lex generates a C program (lex.yy.c)
+// that reads input and executes the matching action for each token.
+//
+// FLEX = Fast Lexical Analyzer (GNU implementation of Lex, more features).
+//
+// STRUCTURE OF A LEX FILE:
+// ------------------------
+// %{
+//   C code (includes, global variables, function prototypes) -- goes to top of generated file
+// %}
+//
+// DEFINITIONS:
+//   Name    Regex          -- macros for reuse in rules
+//
+// %%
+//
+// RULES:
+//   Regex    { C code action; }    -- when regex matches, execute action
+//
+// %%
+//
+// USER CODE:
+//   C functions (main, yywrap, helpers) -- goes to bottom of generated file
+// ============================================================================
+//
+// HOW LEX WORKS:
+// --------------
+// 1. Input is scanned LEFT-TO-RIGHT
+// 2. At each position, Lex finds the LONGEST MATCHING regex (maximal munch!)
+// 3. If multiple regexes match same length, FIRST rule in file wins
+// 4. Matched text is in yytext, length in yyleng
+// 5. Action code executes, then scanning continues from end of match
+// ============================================================================
+//
+// MAXIMAL MUNCH IN LEX:
+// ---------------------
+// Lex AUTOMATICALLY implements maximal munch!
+// Example: rules for "=" and "=="
+//   "=="  { ... }   // Must come FIRST
+//   "="   { ... }   // If "==" was first, it would match "==" as "=" + "="
+// Lex's algorithm handles this: it picks the LONGEST match.
+// But rule ORDER matters when lengths are equal.
+// ============================================================================
 
 %{
 #include <stdio.h>
 %}
 
+// ============================================================================
+// DEFINITIONS: Named regular expressions for reuse
+// ============================================================================
+// DIGIT: single digit 0-9
+// ID:    identifier = letter/underscore followed by alphanumerics/underscore
+//        This is the standard C identifier pattern
+// ============================================================================
 DIGIT    [0-9]
 ID       [a-zA-Z_][a-zA-Z0-9_]*
 
-%%* num
 
+%%
+
+// ============================================================================
+// RULES SECTION: Pattern { action }
+// Order matters for same-length matches!
+// ============================================================================
+
+// KEYWORDS: Must come BEFORE ID rule!
+// If ID came first, "int" would match as IDENTIFIER not KEYWORD
+// Lex picks longest match, but "int" matches both keyword rule (3 chars)
+// and ID rule (3 chars) - FIRST rule wins.
 "int"|"float"|"if"|"else"|"return" { printf("KEYWORD: %s\n", yytext); }
 
+// IDENTIFIER: Uses the ID macro defined above
+// Matches: a, x, myVar, _temp, var123
+// Does NOT match: 123abc (starts with digit)
 {ID}        { printf("IDENTIFIER: %s\n", yytext); }
 
+// INTEGER NUMBER: One or more digits
+// Matches: 0, 42, 1000
+// Does NOT match: 3.14 (no dot), 1e5 (no exponent)
+// For full numbers, you'd add: {DIGIT}+("."{DIGIT}+)?([eE][+-]?{DIGIT}+)?
 {DIGIT}+    { printf("NUMBER (INTEGER): %s\n", yytext); }
 
+// ARITHMETIC OPERATORS: Single characters
+// Each is a separate token (no maximal munch needed for single chars)
 "+"|"-"|"*"|"/" { printf("ARITHMETIC OPERATOR: %s\n", yytext); }
+
+// ASSIGNMENT OPERATOR: Single '='
 "="         { printf("ASSIGNMENT OPERATOR: %s\n", yytext); }
+
+// RELATIONAL OPERATORS: Two characters - ORDER MATTERS!
+// "==" and "!=" must come before "=" if "=" were also a rule here
+// (but "=" is handled above as assignment)
 "=="|"!="   { printf("RELATIONAL OPERATOR: %s\n", yytext); }
+
+// PUNCTUATORS: Semicolon and comma
 ";"|","     { printf("PUNCTUATOR: %s\n", yytext); }
 
-[ \t\n]+    {}
+// WHITESPACE: Spaces, tabs, newlines - IGNORE (no output)
+// The empty action {} means "match but do nothing"
+[ \t\n]+    { }
 
+// UNKNOWN TOKEN: Catch-all for any character not matched above
+// The dot '.' matches ANY single character (except newline)
+// This MUST BE LAST rule (catch-all)
 .           { printf("UNKNOWN TOKEN: %s\n", yytext); }
 
 %%
 
+
+// ============================================================================
+// USER CODE SECTION
+// ============================================================================
+
+// yywrap(): Called when EOF reached
+// Return 1 = stop scanning, 0 = continue (for multiple files)
 int yywrap() {
     return 1;
 }
 
+// main(): Entry point
 int main() {
     printf("Enter code (Press Ctrl+D to stop):\n");
-    yylex();
+    yylex();          // Generated by Lex - the main scanning loop
     return 0;
 }
+
+
+// ============================================================================
+// HOW TO COMPILE AND RUN:
+// ============================================================================
+//
+// 1. Install flex:  sudo apt-get install flex  (Linux)
+//                   or download for Windows
+//
+// 2. Generate C code:
+//    flex que2.l
+//    This creates: lex.yy.c
+//
+// 3. Compile:
+//    gcc lex.yy.c -o lexer -lfl
+//    (-lfl links the flex library)
+//
+// 4. Run:
+//    ./lexer
+//    Type input, press Ctrl+D (Linux/Mac) or Ctrl+Z (Windows) to end
+//
+// ============================================================================
+//
+// SAMPLE RUN:
+// ============================================================================
+// Input:
+//   int x = 10;
+//   float y = x + 5;
+//   if (x != y) return 0;
+//
+// Output:
+//   KEYWORD: int
+//   IDENTIFIER: x
+//   ASSIGNMENT OPERATOR: =
+//   NUMBER (INTEGER): 10
+//   PUNCTUATOR: ;
+//   KEYWORD: float
+//   IDENTIFIER: y
+//   ASSIGNMENT OPERATOR: =
+//   IDENTIFIER: x
+//   ARITHMETIC OPERATOR: +
+//   NUMBER (INTEGER): 5
+//   PUNCTUATOR: ;
+//   KEYWORD: if
+//   PUNCTUATOR: (
+//   IDENTIFIER: x
+//   RELATIONAL OPERATOR: !=
+//   IDENTIFIER: y
+//   PUNCTUATOR: )
+//   KEYWORD: return
+//   NUMBER (INTEGER): 0
+//   PUNCTUATOR: ;
+//
+// ============================================================================
+//
+// KEY CONCEPTS FOR EXAM:
+// ============================================================================
+//
+// 1. RULE ORDER MATTERS:
+//    - Keywords BEFORE identifiers
+//    - Longer operators (==, !=) BEFORE shorter (=, !)
+//    - Specific patterns BEFORE general (ID, NUMBER)
+//    - Catch-all (.) LAST
+//
+// 2. MAXIMAL MUNCH IS AUTOMATIC:
+//    Lex always picks longest match. You don't need manual peeking.
+//    But rule order resolves ties (same length).
+//
+// 3. YYTEXT AND YYLENG:
+//    yytext = matched string (char*)
+//    yyleng = length of match (int)
+//    Available in every action.
+//
+// 4. DEFINITIONS (macros):
+//    Name    Regex
+//    DIGIT   [0-9]
+//    ID      [a-zA-Z_][a-zA-Z0-9_]*
+//    Use as {NAME} in rules.
+//
+// 5. COMMON TOKEN TYPES IN EXAMS:
+//    KEYWORD, IDENTIFIER, NUMBER (INT/FLOAT), STRING, CHAR,
+//    OPERATORS (+, -, *, /, =, ==, !=, <, >, <=, >=),
+//    PUNCTUATORS (, ; { } [ ]), COMMENTS, WHITESPACE (ignored)
+//
+// 6. ERROR HANDLING:
+//    The '.' rule catches invalid characters.
+//    Real compilers would track line/column for error messages.
+//
+// 7. YYWRAP:
+//    Return 1 for single input, 0 if you want to switch files.
+//    For exam, just return 1.
+//
+// ============================================================================
