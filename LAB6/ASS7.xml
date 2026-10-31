@@ -1,0 +1,156 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<indexing>
+ <paragraph index="9" node_type="writer">Write a program to implement a semantic analyzer that performs type checking , ans semantic error detection on an abstract syntax tree(AST) produced by parser.</paragraph>
+ <paragraph index="11" node_type="writer">CODE:</paragraph>
+ <paragraph index="12" node_type="writer">#include &lt;iostream&gt;</paragraph>
+ <paragraph index="13" node_type="writer">#include &lt;string&gt;</paragraph>
+ <paragraph index="14" node_type="writer">#include &lt;map&gt;</paragraph>
+ <paragraph index="15" node_type="writer">#include &lt;vector&gt;</paragraph>
+ <paragraph index="16" node_type="writer">#include &lt;sstream&gt;</paragraph>
+ <paragraph index="17" node_type="writer">#include &lt;cctype&gt;</paragraph>
+ <paragraph index="19" node_type="writer">using namespace std;</paragraph>
+ <paragraph index="21" node_type="writer">enum NodeType { PROGRAM, DECL, ASSIGN, BINOP, ID, CONST };</paragraph>
+ <paragraph index="22" node_type="writer">enum DataType { INT_T, FLOAT_T, VOID_T, ERR_T };</paragraph>
+ <paragraph index="24" node_type="writer">struct ASTNode {</paragraph>
+ <paragraph index="25" node_type="writer">    NodeType nodeType;</paragraph>
+ <paragraph index="26" node_type="writer">    DataType dataType;</paragraph>
+ <paragraph index="27" node_type="writer">    string value;</paragraph>
+ <paragraph index="28" node_type="writer">    ASTNode* left;</paragraph>
+ <paragraph index="29" node_type="writer">    ASTNode* right;</paragraph>
+ <paragraph index="30" node_type="writer">};</paragraph>
+ <paragraph index="32" node_type="writer">ASTNode* makeNode(NodeType nt, DataType dt, string val, ASTNode* l, ASTNode* r) {</paragraph>
+ <paragraph index="33" node_type="writer">    ASTNode* node = new ASTNode();</paragraph>
+ <paragraph index="34" node_type="writer">    node-&gt;nodeType = nt;</paragraph>
+ <paragraph index="35" node_type="writer">    node-&gt;dataType = dt;</paragraph>
+ <paragraph index="36" node_type="writer">    node-&gt;value = val;</paragraph>
+ <paragraph index="37" node_type="writer">    node-&gt;left = l;</paragraph>
+ <paragraph index="38" node_type="writer">    node-&gt;right = r;</paragraph>
+ <paragraph index="39" node_type="writer">    return node;</paragraph>
+ <paragraph index="40" node_type="writer">}</paragraph>
+ <paragraph index="42" node_type="writer">map&lt;string, DataType&gt; symbolTable;</paragraph>
+ <paragraph index="44" node_type="writer">DataType analyze(ASTNode* node) {</paragraph>
+ <paragraph index="45" node_type="writer">    if (!node) return VOID_T;</paragraph>
+ <paragraph index="47" node_type="writer">    if (node-&gt;nodeType == PROGRAM) {</paragraph>
+ <paragraph index="48" node_type="writer">        analyze(node-&gt;left);</paragraph>
+ <paragraph index="49" node_type="writer">        analyze(node-&gt;right);</paragraph>
+ <paragraph index="50" node_type="writer">        return VOID_T;</paragraph>
+ <paragraph index="51" node_type="writer">    }</paragraph>
+ <paragraph index="53" node_type="writer">    if (node-&gt;nodeType == DECL) {</paragraph>
+ <paragraph index="54" node_type="writer">        if (symbolTable.find(node-&gt;value) != symbolTable.end()) {</paragraph>
+ <paragraph index="55" node_type="writer">            cout &lt;&lt; &quot;Semantic Error: Redeclaration of variable '&quot; &lt;&lt; node-&gt;value &lt;&lt; &quot;'\n&quot;;</paragraph>
+ <paragraph index="56" node_type="writer">        } else {</paragraph>
+ <paragraph index="57" node_type="writer">            symbolTable[node-&gt;value] = node-&gt;dataType;</paragraph>
+ <paragraph index="58" node_type="writer">            cout &lt;&lt; &quot;Success: Declared '&quot; &lt;&lt; node-&gt;value &lt;&lt; &quot;'\n&quot;;</paragraph>
+ <paragraph index="59" node_type="writer">        }</paragraph>
+ <paragraph index="60" node_type="writer">        return VOID_T;</paragraph>
+ <paragraph index="61" node_type="writer">    }</paragraph>
+ <paragraph index="63" node_type="writer">    if (node-&gt;nodeType == ID) {</paragraph>
+ <paragraph index="64" node_type="writer">        if (symbolTable.find(node-&gt;value) == symbolTable.end()) {</paragraph>
+ <paragraph index="65" node_type="writer">            cout &lt;&lt; &quot;Semantic Error: Undeclared variable '&quot; &lt;&lt; node-&gt;value &lt;&lt; &quot;'\n&quot;;</paragraph>
+ <paragraph index="66" node_type="writer">            return ERR_T;</paragraph>
+ <paragraph index="67" node_type="writer">        }</paragraph>
+ <paragraph index="68" node_type="writer">        return symbolTable[node-&gt;value];</paragraph>
+ <paragraph index="69" node_type="writer">    }</paragraph>
+ <paragraph index="71" node_type="writer">    if (node-&gt;nodeType == CONST) {</paragraph>
+ <paragraph index="72" node_type="writer">        return node-&gt;dataType;</paragraph>
+ <paragraph index="73" node_type="writer">    }</paragraph>
+ <paragraph index="75" node_type="writer">    if (node-&gt;nodeType == BINOP) {</paragraph>
+ <paragraph index="76" node_type="writer">        DataType leftType = analyze(node-&gt;left);</paragraph>
+ <paragraph index="77" node_type="writer">        DataType rightType = analyze(node-&gt;right);</paragraph>
+ <paragraph index="79" node_type="writer">        if (leftType == ERR_T || rightType == ERR_T) return ERR_T;</paragraph>
+ <paragraph index="81" node_type="writer">        if (leftType != rightType) {</paragraph>
+ <paragraph index="82" node_type="writer">            cout &lt;&lt; &quot;Semantic Error: Type mismatch in '&quot; &lt;&lt; node-&gt;value &lt;&lt; &quot;' operation\n&quot;;</paragraph>
+ <paragraph index="83" node_type="writer">            return ERR_T;</paragraph>
+ <paragraph index="84" node_type="writer">        }</paragraph>
+ <paragraph index="85" node_type="writer">        return leftType;</paragraph>
+ <paragraph index="86" node_type="writer">    }</paragraph>
+ <paragraph index="88" node_type="writer">    if (node-&gt;nodeType == ASSIGN) {</paragraph>
+ <paragraph index="89" node_type="writer">        DataType leftType = analyze(node-&gt;left);</paragraph>
+ <paragraph index="90" node_type="writer">        DataType rightType = analyze(node-&gt;right);</paragraph>
+ <paragraph index="92" node_type="writer">        if (leftType == ERR_T || rightType == ERR_T) return ERR_T;</paragraph>
+ <paragraph index="94" node_type="writer">        if (leftType != rightType) {</paragraph>
+ <paragraph index="95" node_type="writer">            cout &lt;&lt; &quot;Semantic Error: Type mismatch in assignment to '&quot; &lt;&lt; node-&gt;left-&gt;value &lt;&lt; &quot;'\n&quot;;</paragraph>
+ <paragraph index="96" node_type="writer">            return ERR_T;</paragraph>
+ <paragraph index="97" node_type="writer">        }</paragraph>
+ <paragraph index="98" node_type="writer">        cout &lt;&lt; &quot;Success: Assignment to '&quot; &lt;&lt; node-&gt;left-&gt;value &lt;&lt; &quot;' is semantically valid.\n&quot;;</paragraph>
+ <paragraph index="99" node_type="writer">        return leftType;</paragraph>
+ <paragraph index="100" node_type="writer">    }</paragraph>
+ <paragraph index="102" node_type="writer">    return VOID_T;</paragraph>
+ <paragraph index="103" node_type="writer">}</paragraph>
+ <paragraph index="105" node_type="writer">bool isNumber(const string&amp; s) {</paragraph>
+ <paragraph index="106" node_type="writer">    return !s.empty() &amp;&amp; (isdigit(s[0]) || s[0] == '.');</paragraph>
+ <paragraph index="107" node_type="writer">}</paragraph>
+ <paragraph index="109" node_type="writer">DataType getConstType(const string&amp; s) {</paragraph>
+ <paragraph index="110" node_type="writer">    return (s.find('.') != string::npos) ? FLOAT_T : INT_T;</paragraph>
+ <paragraph index="111" node_type="writer">}</paragraph>
+ <paragraph index="113" node_type="writer">ASTNode* parseOperand(const string&amp; s) {</paragraph>
+ <paragraph index="114" node_type="writer">    if (isNumber(s)) return makeNode(CONST, getConstType(s), s, nullptr, nullptr);</paragraph>
+ <paragraph index="115" node_type="writer">    return makeNode(ID, VOID_T, s, nullptr, nullptr);</paragraph>
+ <paragraph index="116" node_type="writer">}</paragraph>
+ <paragraph index="118" node_type="writer">ASTNode* parseStatement(const vector&lt;string&gt;&amp; tokens) {</paragraph>
+ <paragraph index="119" node_type="writer">    if (tokens.empty()) return nullptr;</paragraph>
+ <paragraph index="121" node_type="writer">    if (tokens[0] == &quot;int&quot;) return makeNode(DECL, INT_T, tokens[1], nullptr, nullptr);</paragraph>
+ <paragraph index="122" node_type="writer">    if (tokens[0] == &quot;float&quot;) return makeNode(DECL, FLOAT_T, tokens[1], nullptr, nullptr);</paragraph>
+ <paragraph index="124" node_type="writer">    if (tokens.size() &gt;= 3 &amp;&amp; tokens[1] == &quot;=&quot;) {</paragraph>
+ <paragraph index="125" node_type="writer">        ASTNode* leftID = makeNode(ID, VOID_T, tokens[0], nullptr, nullptr);</paragraph>
+ <paragraph index="126" node_type="writer">        ASTNode* rightNode = nullptr;</paragraph>
+ <paragraph index="128" node_type="writer">        if (tokens.size() == 3) {</paragraph>
+ <paragraph index="129" node_type="writer">            rightNode = parseOperand(tokens[2]);</paragraph>
+ <paragraph index="130" node_type="writer">        } else if (tokens.size() == 5) {</paragraph>
+ <paragraph index="131" node_type="writer">            ASTNode* op1 = parseOperand(tokens[2]);</paragraph>
+ <paragraph index="132" node_type="writer">            ASTNode* op2 = parseOperand(tokens[4]);</paragraph>
+ <paragraph index="133" node_type="writer">            rightNode = makeNode(BINOP, VOID_T, tokens[3], op1, op2);</paragraph>
+ <paragraph index="134" node_type="writer">        }</paragraph>
+ <paragraph index="135" node_type="writer">        return makeNode(ASSIGN, VOID_T, &quot;=&quot;, leftID, rightNode);</paragraph>
+ <paragraph index="136" node_type="writer">    }</paragraph>
+ <paragraph index="137" node_type="writer">    return nullptr;</paragraph>
+ <paragraph index="138" node_type="writer">}</paragraph>
+ <paragraph index="140" node_type="writer">int main() {</paragraph>
+ <paragraph index="141" node_type="writer">    cout &lt;&lt; &quot;Enter space-separated statements.\n&quot;;</paragraph>
+ <paragraph index="143" node_type="writer">    string line;</paragraph>
+ <paragraph index="144" node_type="writer">    ASTNode* root = nullptr;</paragraph>
+ <paragraph index="145" node_type="writer">    ASTNode* current = nullptr;</paragraph>
+ <paragraph index="147" node_type="writer">    while (true) {</paragraph>
+ <paragraph index="148" node_type="writer">        cout &lt;&lt; &quot;&gt; &quot;;</paragraph>
+ <paragraph index="149" node_type="writer">        getline(cin, line);</paragraph>
+ <paragraph index="150" node_type="writer">        if (line == &quot;exit&quot;) break;</paragraph>
+ <paragraph index="152" node_type="writer">        stringstream ss(line);</paragraph>
+ <paragraph index="153" node_type="writer">        string token;</paragraph>
+ <paragraph index="154" node_type="writer">        vector&lt;string&gt; tokens;</paragraph>
+ <paragraph index="155" node_type="writer">        while (ss &gt;&gt; token) {</paragraph>
+ <paragraph index="156" node_type="writer">            tokens.push_back(token);</paragraph>
+ <paragraph index="157" node_type="writer">        }</paragraph>
+ <paragraph index="159" node_type="writer">        if (tokens.empty()) continue;</paragraph>
+ <paragraph index="161" node_type="writer">        ASTNode* stmt = parseStatement(tokens);</paragraph>
+ <paragraph index="162" node_type="writer">        if (stmt) {</paragraph>
+ <paragraph index="163" node_type="writer">            ASTNode* progNode = makeNode(PROGRAM, VOID_T, &quot;&quot;, stmt, nullptr);</paragraph>
+ <paragraph index="164" node_type="writer">            if (!root) {</paragraph>
+ <paragraph index="165" node_type="writer">                root = progNode;</paragraph>
+ <paragraph index="166" node_type="writer">                current = root;</paragraph>
+ <paragraph index="167" node_type="writer">            } else {</paragraph>
+ <paragraph index="168" node_type="writer">                current-&gt;right = progNode;</paragraph>
+ <paragraph index="169" node_type="writer">                current = progNode;</paragraph>
+ <paragraph index="170" node_type="writer">            }</paragraph>
+ <paragraph index="171" node_type="writer">        } else {</paragraph>
+ <paragraph index="172" node_type="writer">            cout &lt;&lt; &quot;Syntax Error: Unrecognized format.\n&quot;;</paragraph>
+ <paragraph index="173" node_type="writer">        }</paragraph>
+ <paragraph index="174" node_type="writer">    }</paragraph>
+ <paragraph index="176" node_type="writer">    cout &lt;&lt; &quot;\n--- Starting Semantic Analysis ---\n&quot;;</paragraph>
+ <paragraph index="177" node_type="writer">    analyze(root);</paragraph>
+ <paragraph index="179" node_type="writer">    return 0;</paragraph>
+ <paragraph index="180" node_type="writer">}</paragraph>
+ <paragraph index="184" node_type="writer">OUTPUT:</paragraph>
+ <paragraph index="186" node_type="writer">student@nitcse-OptiPlex-7000:~/24CS8017/LAB7$ g++ que_1.cpp -o q_1</paragraph>
+ <paragraph index="187" node_type="writer">student@nitcse-OptiPlex-7000:~/24CS8017/LAB7$ ./q_1</paragraph>
+ <paragraph index="188" node_type="writer">Enter space-separated statements.</paragraph>
+ <paragraph index="189" node_type="writer">&gt; int x</paragraph>
+ <paragraph index="190" node_type="writer">&gt; x = 10</paragraph>
+ <paragraph index="191" node_type="writer">&gt; y = x + 5.5</paragraph>
+ <paragraph index="192" node_type="writer">&gt; exit</paragraph>
+ <paragraph index="194" node_type="writer">--- Starting Semantic Analysis ---</paragraph>
+ <paragraph index="195" node_type="writer">Success: Declared 'x'</paragraph>
+ <paragraph index="196" node_type="writer">Success: Assignment to 'x' is semantically valid.</paragraph>
+ <paragraph index="197" node_type="writer">Semantic Error: Undeclared variable 'y'</paragraph>
+ <paragraph index="198" node_type="writer">Semantic Error: Type mismatch in '+' operation</paragraph>
+ <paragraph index="199" node_type="writer">student@nitcse-OptiPlex-7000:~/24CS8017/LAB7$ </paragraph>
+</indexing>
