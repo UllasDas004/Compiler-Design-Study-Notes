@@ -20,7 +20,7 @@ Sets calculateFirst(Grammar& grammar) {
 	// find all the terminals
     for (auto& [lhs, productions] : grammar) {
         for (auto& production : productions) {
-            for (string& symbol : production) {
+            for (const string& symbol : production) {
             	// it's not on the left side(non-terminal) and it's not epsilon
                 if (!grammar.count(symbol) && symbol != "eps") {
                     terminals.insert(symbol);
@@ -29,7 +29,7 @@ Sets calculateFirst(Grammar& grammar) {
         }
     }
 	// initialize first[a] = {a}, first[b] = {b}, first[c] = {c} .... for terminals
-    for (string& terminal : terminals) {
+    for (const string& terminal : terminals) {
         first[terminal].insert(terminal);
     }
 
@@ -45,10 +45,10 @@ Sets calculateFirst(Grammar& grammar) {
             for (auto& production : productions) {
                 bool nullable = true;
 
-                for (string& symbol : production) {
+                for (const string& symbol : production) {
                     int oldSize = first[lhs].size();
 
-                    for (string& value : first[symbol]) {
+                    for (const string& value : first[symbol]) {
                         if (value != "eps") {
                             first[lhs].insert(value);
                         }
