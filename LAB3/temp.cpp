@@ -33,6 +33,7 @@
 #include <unordered_map>
 #include <cctype>
 #include <stdexcept>
+#include <algorithm>
 
 using namespace std;
 
@@ -136,6 +137,12 @@ public:
     virtual ~ASTNode() = default;
     virtual int evaluate(const unordered_map<string, int>& env) = 0;
     virtual void print(int indent = 0) = 0;
+    virtual void printTree(const string& prefix, bool isLeft, bool isRoot, bool hasRightSibling) const = 0;
+
+    // New accessors for tree diagram printing
+    virtual string label() const = 0;
+    virtual const ASTNode* leftChild() const { return nullptr; }
+    virtual const ASTNode* rightChild() const { return nullptr; }
 };
 
 
@@ -152,6 +159,15 @@ public:
     void print(int indent) override {
         cout << string(indent, ' ') << "ID(" << name << ")" << endl;
     }
+    void printTree(const string& prefix, bool isLeft, bool isRoot, bool hasRightSibling) const override {
+        if (isRoot) {
+            cout << "ID(" << name << ")\n";
+        } else {
+            cout << prefix << (isLeft ? "├── " : "└── ") << "ID(" << name << ")\n";
+        }
+    }
+    string label() const override { return "id"; }  // Short label for tight tree
+    // leftChild/rightChild return nullptr by default
 };
 
 // NUMBER NODE: Numeric literal (e.g., "5", "42") or special "num"
@@ -160,8 +176,6 @@ class NumNode : public ASTNode {
 public:
     NumNode(const string& v) : value(v) {}
     int evaluate(const unordered_map<string, int>& env) override {
-        // Special: if value is "num", look up in env
-        // Otherwise parse as integer
         if (value == "num")
             return env.at("num");
         return stoi(value);
@@ -169,6 +183,14 @@ public:
     void print(int indent) override {
         cout << string(indent, ' ') << "NUM(" << value << ")" << endl;
     }
+    void printTree(const string& prefix, bool isLeft, bool isRoot, bool hasRightSibling) const override {
+        if (isRoot) {
+            cout << "NUM(" << value << ")\n";
+        } else {
+            cout << prefix << (isLeft ? "├── " : "└── ") << "NUM(" << value << ")\n";
+        }
+    }
+    string label() const override { return "num"; }  // Short label for tight tree
 };
 
 
@@ -201,7 +223,93 @@ public:
         left->print(indent + 2);
         right->print(indent + 2);
     }
+
+    // Visual tree printing for BinaryOpNode
+    void printTree(const string& prefix, bool isLeft, bool isRoot, bool hasRightSibling) const override {
+        if (isRoot) {
+            cout << op << '\n';
+        } else {
+            cout << prefix << (isLeft ? "├── " : "└── ") << op << '\n';
+        }
+
+        string childPrefix = prefix;
+        if (!isRoot) {
+            childPrefix += (isLeft ? "│   " : "    ");
+        }
+
+        bool hasLeft = left != nullptr;
+        bool hasRight = right != nullptr;
+
+        // Print LEFT child FIRST (so it appears above right in output)
+        if (hasLeft) {
+            left->printTree(childPrefix, true, false, hasRight);
+        }
+        // Print RIGHT child SECOND (so it appears below left in output)
+        if (hasRight) {
+            right->printTree(childPrefix, false, false, false);
+        }
+    }
+
+    // Accessors for tree diagram printing
+    string label() const override { return string(1, op); }
+    const ASTNode* leftChild() const override { return left; }
+    const ASTNode* rightChild() const override { return right; }
 };
+
+
+// ============================================================================
+// SIMPLE TREE PRINTING - Top-down with / and \ branches
+// ============================================================================
+// Recursively builds vector<string> for each subtree.
+// Works for binary expression trees (each node has 0 or 2 children).
+// ============================================================================
+vector<string> treeLines(const ASTNode* n) {
+    if (!n) return {};
+    string label = n->label();
+    auto L = treeLines(n->leftChild());
+    auto R = treeLines(n->rightChild());
+
+    // Leaf: just the label
+    if (L.empty() && R.empty()) return {label};
+
+    // Width of left/right blocks (first line width)
+    int lw = L.empty() ? 0 : (int)L[0].size();
+    int rw = R.empty() ? 0 : (int)R[0].size();
+
+    // Root centered over children with 1 space gap
+    int rootPos = lw + 1;
+    int totalW  = lw + 1 + rw + 1;
+
+    vector<string> out;
+
+    // Line 0: root label centered over left block
+    string top(totalW, ' ');
+    for (int i = 0; i < (int)label.size(); i++)
+        top[rootPos - (int)label.size()/2 + i] = label[i];
+    out.push_back(top);
+
+    // Line 1: branches / 
+    string branchLine(totalW, ' ');
+    if (!L.empty()) branchLine[rootPos - 1] = '/';
+    if (!R.empty()) branchLine[rootPos + 1] = '\\';
+    out.push_back(branchLine);
+
+    // Remaining lines: merge L and R side by side
+    int rows = max((int)L.size(), (int)R.size());
+    for (int i = 0; i < rows; i++) {
+        string row(totalW, ' ');
+        if (i < (int)L.size()) row.replace(0, lw, L[i]);
+        if (i < (int)R.size()) row.replace(lw + 2, rw, R[i]);
+        out.push_back(row);
+    }
+    return out;
+}
+
+void printTreeDiagram(const ASTNode* root) {
+    if (!root) return;
+    for (const string& line : treeLines(root))
+        cout << line << "\n";
+}
 
 
 // ============================================================================
@@ -330,8 +438,8 @@ void evaluateExpression(const string& expr_str, const unordered_map<string, int>
         Parser parser(expr_str);
         ASTNode* ast = parser.parse();
 
-        cout << "AST Structure:\n";
-        ast->print(2);
+        cout << "AST Visual Tree:\n";
+        printTreeDiagram(ast);
 
         cout << "Result: " << ast->evaluate(env) << "\n";
         cout << string(40, '-') << "\n";

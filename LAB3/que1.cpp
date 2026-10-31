@@ -63,6 +63,7 @@
 #include <string>
 #include <cctype>
 #include <map>
+#include <vector>
 using namespace std;
 
 
@@ -295,22 +296,57 @@ int evaluate(Node* root) {
 
 
 // ============================================================================
-// printAST(Node* root, int level): Pretty-print tree with indentation
+// SIMPLE TREE PRINTING - Top-down with / and \ branches
 // ============================================================================
-// Pre-order traversal: print node, then children with increased indentation.
+// Returns vector of lines for this subtree, recursively.
+// For binary expression trees: each internal node has 2 children (or 0).
 // ============================================================================
-void printAST(Node* root, int level = 0) {
-    if (!root)
-        return;
+vector<string> treeLines(Node* n) {
+    if (!n) return {};
+    string label = n->value;
+    auto L = treeLines(n->left);
+    auto R = treeLines(n->right);
 
-    for (int i = 0; i < level; i++)
-        cout << "  ";
+    // Leaf: just the label
+    if (L.empty() && R.empty()) return {label};
 
-    // Both OP and leaf nodes just print their value
-    cout << root->value << '\n';
+    // Width of left/right blocks (first line width)
+    int lw = L.empty() ? 0 : (int)L[0].size();
+    int rw = R.empty() ? 0 : (int)R[0].size();
 
-    printAST(root->left, level + 1);
-    printAST(root->right, level + 1);
+    // Root centered over children with 1 space gap
+    int rootPos = lw + 1;
+    int totalW  = lw + 1 + rw + 1;
+
+    vector<string> out;
+
+    // Line 0: root label centered over left block
+    string top(totalW, ' ');
+    for (int i = 0; i < (int)label.size(); i++)
+        top[rootPos - (int)label.size()/2 + i] = label[i];
+    out.push_back(top);
+
+    // Line 1: branches \ /
+    string br(totalW, ' ');
+    if (!L.empty()) br[rootPos - 1] = '/';
+    if (!R.empty()) br[rootPos + 1] = '\\';
+    out.push_back(br);
+
+    // Remaining lines: merge L and R side by side
+    int rows = max((int)L.size(), (int)R.size());
+    for (int i = 0; i < rows; i++) {
+        string row(totalW, ' ');
+        if (i < (int)L.size()) row.replace(0, lw, L[i]);
+        if (i < (int)R.size()) row.replace(lw + 2, rw, R[i]);
+        out.push_back(row);
+    }
+    return out;
+}
+
+void printAST(Node* root) {
+    if (!root) return;
+    for (const string& line : treeLines(root))
+        cout << line << "\n";
 }
 
 
