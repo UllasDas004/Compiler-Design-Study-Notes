@@ -62,8 +62,7 @@ DataType leftType = analyze(node->left);
 DataType rightType = analyze(node->right);
 if (leftType == ERR_T || rightType == ERR_T) return ERR_T;
 if (leftType != rightType) {
-cout << "Semantic Error: Type mismatch in '" << node-
->value << "' operation\n";
+cout << "Semantic Error: Type mismatch in '" << node->value << "' operation\n";
 return ERR_T;
 }
 return leftType;
@@ -73,8 +72,7 @@ DataType leftType = analyze(node->left);
 DataType rightType = analyze(node->right);
 if (leftType == ERR_T || rightType == ERR_T) return ERR_T;
 if (leftType != rightType) {
-cout << "Semantic Error: Type mismatch in assignment
-to '" << node->left->value << "'\n";
+cout << "Semantic Error: Type mismatch in assignment to '" << node->left->value << "'\n";
 return ERR_T;
 }
 cout << "Success: Assignment to '" << node->left->value <<
